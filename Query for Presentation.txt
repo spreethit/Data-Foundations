@@ -1,0 +1,107 @@
+/* Query 1 - Query used for 1st insight */
+SELECT
+   e.Firstname || ' ' || e.lastname AS SalesRepName,
+  '$' || SUM(i.total) AS Total_sales_amount
+FROM Employee AS e
+JOIN Customer c
+  ON e.employeeid = c.Supportrepid
+JOIN Invoice i
+  ON c.customerid = i.customerid
+GROUP BY 1
+ORDER BY 2 DESC;
+
+
+/* Query 2 - Query used for 2nd insight */
+
+WITH t1
+AS (SELECT
+  g.genreid id,
+  g.name name,
+  COUNT(t.trackid) numberoftracks
+FROM Genre g
+JOIN Track t
+  ON g.genreid = t.genreid
+GROUP BY 1,
+         2),
+t2
+AS (SELECT
+  t1.name genre_name,
+  t1.numberoftracks track_count,
+  CASE
+    WHEN t1.numberoftracks > 1000 THEN 'Genre with more than 1000 tracks'
+    WHEN t1.numberoftracks > 100 AND
+      t1.numberoftracks <= 1000 THEN 'Genre with 100 - 1000 tracks'
+    ELSE 'Genre with less than 100 Tracks'
+  END AS Type
+FROM t1)
+SELECT
+  t2.type Category,
+  COUNT(*) number_of_genres
+FROM t2
+GROUP BY 1
+ORDER BY 2 DESC;
+
+/* Query 3 - Query used for 3rd insight */
+
+SELECT
+  a.name Artist_name,
+  SUM(il.Unitprice) Total_amt_earned
+FROM artist a
+JOIN album ab
+  ON a.artistid = ab.artistid
+JOIN Track t
+  ON ab.albumid = t.albumid
+JOIN InvoiceLine il
+  ON t.trackid = il.trackid
+GROUP BY 1
+ORDER BY 2 DESC
+LIMIT 10;
+
+/* Query 4 - Query used for 4th insight */
+
+WITH tab_greater AS
+  (WITH Tab1 AS
+     (WITH t1 AS
+        (SELECT t.name trackname,
+                t.milliseconds lengthtrack,
+                mt.name media_type
+         FROM Track t
+         JOIN MediaType mt ON t.mediatypeid = mt.mediatypeid
+         ORDER BY 3) SELECT t1.trackname,
+                            t1.lengthtrack,
+                            t1.media_type
+      FROM t1
+      WHERE t1.lengthtrack >
+          (SELECT AVG(milliseconds) avg_track_length
+           FROM Track)
+      ORDER BY 3) SELECT tab1.media_type AS type_of_media,
+                         COUNT (*) trackscount_greaterthan_avg
+   FROM Tab1
+   GROUP BY 1),
+     Tab_less AS
+  (WITH Tab2 AS
+     (WITH t1 AS
+        (SELECT t.name trackname,
+                t.milliseconds lengthtrack,
+                mt.name media_type
+         FROM Track t
+         JOIN MediaType mt ON t.mediatypeid = mt.mediatypeid
+         ORDER BY 3) SELECT t1.trackname,
+                            t1.lengthtrack,
+                            t1.media_type
+      FROM t1
+      WHERE t1.lengthtrack <=
+          (SELECT AVg(milliseconds) avg_track_length
+           FROM Track)
+      ORDER BY 3) SELECT tab2.media_type AS type_of_media,
+                         COUNT (*) trackscount_lessthan_avg
+   FROM Tab2
+   GROUP BY 1)
+SELECT tab_less.type_of_media,
+       tab_greater.trackscount_greaterthan_avg greater_than_avg_track_length,
+       tab_less.trackscount_lessthan_avg less_than_avg_track_length
+FROM Tab_less
+LEFT JOIN tab_greater ON tab_greater.type_of_media = tab_less.type_of_media;
+
+
+
